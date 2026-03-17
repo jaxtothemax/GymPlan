@@ -169,15 +169,45 @@ function SortableExercise({ exercise, onEdit, onDelete, editMode }: SortableExer
 
         {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
-            <span className="body-strong" style={{ color: 'var(--text-1)' }}>{exercise.name}</span>
-            {exercise.replaces_exercise && (
-              <span className="caption" style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>
-                replaces {exercise.replaces_exercise}
-              </span>
+          {/* Name row + YouTube chip right-aligned */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span className="body-strong" style={{ color: 'var(--text-1)' }}>{exercise.name}</span>
+              {exercise.replaces_exercise && (
+                <span className="caption" style={{ color: 'var(--text-3)', fontStyle: 'italic', marginLeft: '6px' }}>
+                  replaces {exercise.replaces_exercise}
+                </span>
+              )}
+            </div>
+            {exercise.youtube_url && (
+              <a
+                href={exercise.youtube_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                title="Watch on YouTube"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  background: 'rgba(255,0,0,0.10)',
+                  color: '#FF0000',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  flexShrink: 0,
+                  letterSpacing: '0.2px',
+                }}
+              >
+                <Youtube size={12} />
+                Watch
+              </a>
             )}
           </div>
 
+          {/* Badges row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: exercise.effort_notes ? '6px' : 0 }}>
             <Badge>{exercise.default_sets} sets</Badge>
             {exercise.rep_range_min != null && (
@@ -190,18 +220,6 @@ function SortableExercise({ exercise, onEdit, onDelete, editMode }: SortableExer
             )}
             {exercise.rest_seconds != null && (
               <Badge>{exercise.rest_seconds}s rest</Badge>
-            )}
-            {exercise.youtube_url && (
-              <a
-                href={exercise.youtube_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#FF0000', display: 'flex', alignItems: 'center', gap: '2px' }}
-                onClick={e => e.stopPropagation()}
-                title="Watch on YouTube"
-              >
-                <Youtube size={16} />
-              </a>
             )}
           </div>
 
