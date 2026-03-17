@@ -86,7 +86,7 @@ export default function SignIn() {
                 border: `1px solid ${errors.email ? 'var(--red)' : 'var(--border)'}`,
                 background: 'var(--surface-1)',
                 color: 'var(--text-1)',
-                fontSize: '15px',
+                fontSize: '16px',
               }}
             />
             {errors.email && (
@@ -112,7 +112,7 @@ export default function SignIn() {
                 border: `1px solid ${errors.password ? 'var(--red)' : 'var(--border)'}`,
                 background: 'var(--surface-1)',
                 color: 'var(--text-1)',
-                fontSize: '15px',
+                fontSize: '16px',
               }}
             />
             {errors.password && (
@@ -142,7 +142,7 @@ export default function SignIn() {
               borderRadius: '12px',
               background: 'var(--blue)',
               color: '#fff',
-              fontSize: '15px',
+              fontSize: '16px',
               fontWeight: 600,
               border: 'none',
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
@@ -154,22 +154,20 @@ export default function SignIn() {
           </button>
 
           {/* Links */}
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <Link
               to="/auth/forgot-password"
-              style={{ color: 'var(--blue)', fontSize: '14px', textDecoration: 'none' }}
+              style={{ color: 'var(--blue)', fontSize: '14px', textDecoration: 'none', display: 'block', padding: '13px 0' }}
             >
               Forgot password?
             </Link>
-            <p className="caption" style={{ color: 'var(--text-2)' }}>
+            <Link
+              to="/auth/signup"
+              style={{ color: 'var(--text-2)', fontSize: '14px', textDecoration: 'none', display: 'block', padding: '13px 0' }}
+            >
               Don't have an account?{' '}
-              <Link
-                to="/auth/signup"
-                style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}
-              >
-                Sign up
-              </Link>
-            </p>
+              <span style={{ color: 'var(--blue)', fontWeight: 600 }}>Sign up</span>
+            </Link>
           </div>
         </form>
       </div>

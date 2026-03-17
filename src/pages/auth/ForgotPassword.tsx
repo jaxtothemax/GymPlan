@@ -91,7 +91,7 @@ export default function ForgotPassword() {
                   border: `1px solid ${errors.email ? 'var(--red)' : 'var(--border)'}`,
                   background: 'var(--surface-1)',
                   color: 'var(--text-1)',
-                  fontSize: '15px',
+                  fontSize: '16px',
                 }}
               />
               {errors.email && (
@@ -116,7 +116,7 @@ export default function ForgotPassword() {
                 borderRadius: '12px',
                 background: 'var(--blue)',
                 color: '#fff',
-                fontSize: '15px',
+                fontSize: '16px',
                 fontWeight: 600,
                 border: 'none',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',

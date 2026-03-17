@@ -174,13 +174,16 @@ def run_tests():
         check_no_horizontal_overflow(page, "Forgot password")
         check_inputs_font_size(page, "Forgot password")
 
-        # Unauthenticated redirect
-        page.goto(BASE_URL + "/", wait_until="domcontentloaded")
-        time.sleep(0.5)
-        if "/auth/signin" in page.url:
+        # Unauthenticated redirect — wait for auth state to resolve
+        page.goto(BASE_URL + "/", wait_until="networkidle")
+        try:
+            page.wait_for_url("**/auth/signin**", timeout=5000)
             ok("Unauthenticated — redirects to sign-in")
-        else:
-            fail("Unauthenticated — redirects to sign-in", f"Was at {page.url}")
+        except Exception:
+            if "/auth/signin" in page.url:
+                ok("Unauthenticated — redirects to sign-in")
+            else:
+                fail("Unauthenticated — redirects to sign-in", f"Was at {page.url}")
 
         print("\n── Zod form validation ───────────────────────────────")
         page.goto(BASE_URL + "/auth/signin", wait_until="networkidle")

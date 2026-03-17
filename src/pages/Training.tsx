@@ -140,9 +140,10 @@ interface SortableExerciseProps {
   exercise: Exercise
   onEdit: () => void
   onDelete: () => void
+  editMode: boolean
 }
 
-function SortableExercise({ exercise, onEdit, onDelete }: SortableExerciseProps) {
+function SortableExercise({ exercise, onEdit, onDelete, editMode }: SortableExerciseProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: exercise.id })
 
   const style: CSSProperties = {
@@ -154,15 +155,17 @@ function SortableExercise({ exercise, onEdit, onDelete }: SortableExerciseProps)
   return (
     <div ref={setNodeRef} style={style}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 0' }}>
-        {/* Drag handle */}
-        <button
-          {...attributes}
-          {...listeners}
-          style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'grab', color: 'var(--text-3)', flexShrink: 0, marginTop: '2px' }}
-          title="Drag to reorder"
-        >
-          <GripVertical size={16} />
-        </button>
+        {/* Drag handle — only in edit mode */}
+        {editMode && (
+          <button
+            {...attributes}
+            {...listeners}
+            style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'grab', color: 'var(--text-3)', flexShrink: 0, marginTop: '2px' }}
+            title="Drag to reorder"
+          >
+            <GripVertical size={16} />
+          </button>
+        )}
 
         {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -209,15 +212,17 @@ function SortableExercise({ exercise, onEdit, onDelete }: SortableExerciseProps)
           )}
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-          <IconBtn onClick={onEdit} title="Edit exercise">
-            <Pencil size={15} />
-          </IconBtn>
-          <IconBtn onClick={onDelete} title="Delete exercise">
-            <Trash2 size={15} color="var(--red)" />
-          </IconBtn>
-        </div>
+        {/* Actions — only in edit mode */}
+        {editMode && (
+          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+            <IconBtn onClick={onEdit} title="Edit exercise">
+              <Pencil size={15} />
+            </IconBtn>
+            <IconBtn onClick={onDelete} title="Delete exercise">
+              <Trash2 size={15} color="var(--red)" />
+            </IconBtn>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -228,6 +233,9 @@ export default function Training() {
   const { user } = useAuth()
   const { showToast } = useToast()
   const queryClient = useQueryClient()
+
+  // Edit mode
+  const [editMode, setEditMode] = useState(false)
 
   // Sheet states
   const [editProgSheet, setEditProgSheet] = useState(false)
@@ -535,14 +543,31 @@ export default function Training() {
             <h1 className="title-lg" style={{ color: 'var(--text-1)', flex: 1 }}>
               {programme?.name ?? 'No programme'}
             </h1>
-            {programme && (
-              <IconBtn onClick={() => setEditProgSheet(true)} title="Edit programme">
+            {editMode ? (
+              <button
+                onClick={() => setEditMode(false)}
+                style={{
+                  background: 'var(--blue)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '100px',
+                  padding: '6px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  minHeight: '32px',
+                }}
+              >
+                Done
+              </button>
+            ) : (
+              <IconBtn onClick={() => setEditMode(true)} title="Edit programme layout">
                 <Pencil size={18} color="var(--text-2)" />
               </IconBtn>
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {(allProgrammes?.length ?? 0) > 1 && (
               <button
                 onClick={() => {/* handled inline below */}}
@@ -551,17 +576,27 @@ export default function Training() {
                 Switch programme
               </button>
             )}
-            <button
-              onClick={() => {
-                const name = window.prompt('New programme name:')
-                if (name?.trim()) {
-                  createProgramme.mutate({ name: name.trim() })
-                }
-              }}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--blue)', fontSize: '13px' }}
-            >
-              + New programme
-            </button>
+            {editMode && programme && (
+              <button
+                onClick={() => setEditProgSheet(true)}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-2)', fontSize: '13px' }}
+              >
+                Edit programme
+              </button>
+            )}
+            {editMode && (
+              <button
+                onClick={() => {
+                  const name = window.prompt('New programme name:')
+                  if (name?.trim()) {
+                    createProgramme.mutate({ name: name.trim() })
+                  }
+                }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--blue)', fontSize: '13px' }}
+              >
+                + New programme
+              </button>
+            )}
           </div>
 
           {/* Programme switcher */}
@@ -629,14 +664,16 @@ export default function Training() {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} onClick={e => e.stopPropagation()}>
-                    <IconBtn onClick={() => setEditSessionSheet(session)} title="Edit session">
-                      <Pencil size={15} />
-                    </IconBtn>
-                    <IconBtn onClick={() => setDeleteConfirm({ type: 'session', id: session.id })} title="Delete session">
-                      <Trash2 size={15} color="var(--red)" />
-                    </IconBtn>
-                  </div>
+                  {editMode && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} onClick={e => e.stopPropagation()}>
+                      <IconBtn onClick={() => setEditSessionSheet(session)} title="Edit session">
+                        <Pencil size={15} />
+                      </IconBtn>
+                      <IconBtn onClick={() => setDeleteConfirm({ type: 'session', id: session.id })} title="Delete session">
+                        <Trash2 size={15} color="var(--red)" />
+                      </IconBtn>
+                    </div>
+                  )}
 
                   <div style={{ color: 'var(--text-3)', flexShrink: 0 }}>
                     {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -684,6 +721,7 @@ export default function Training() {
                                 exercise={exercise}
                                 onEdit={() => setEditExerciseSheet(exercise)}
                                 onDelete={() => setDeleteConfirm({ type: 'exercise', id: exercise.id })}
+                                editMode={editMode}
                               />
                               {idx < sessionExercises.length - 1 && (
                                 <div style={{ height: '1px', background: 'var(--border)' }} />
@@ -700,29 +738,31 @@ export default function Training() {
                       </p>
                     )}
 
-                    {/* Add exercise button */}
-                    <button
-                      onClick={() => setAddExerciseSheet(session.id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        margin: '12px 0',
-                        background: 'var(--surface-2)',
-                        border: '1px dashed var(--border)',
-                        borderRadius: '10px',
-                        padding: '8px 14px',
-                        cursor: 'pointer',
-                        color: 'var(--blue)',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        width: '100%',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Plus size={16} />
-                      Add exercise
-                    </button>
+                    {/* Add exercise button — edit mode only */}
+                    {editMode && (
+                      <button
+                        onClick={() => setAddExerciseSheet(session.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          margin: '12px 0',
+                          background: 'var(--surface-2)',
+                          border: '1px dashed var(--border)',
+                          borderRadius: '10px',
+                          padding: '8px 14px',
+                          cursor: 'pointer',
+                          color: 'var(--blue)',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          width: '100%',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Plus size={16} />
+                        Add exercise
+                      </button>
+                    )}
 
                     {/* Lower body warning */}
                     {isLower && (
@@ -740,29 +780,31 @@ export default function Training() {
           })}
         </div>
 
-        {/* Add session button */}
-        <button
-          onClick={() => setAddSessionSheet(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginTop: '16px',
-            background: 'var(--surface-1)',
-            border: '1px dashed var(--border)',
-            borderRadius: '16px',
-            padding: '14px',
-            cursor: 'pointer',
-            color: 'var(--blue)',
-            fontSize: '15px',
-            fontWeight: 500,
-            width: '100%',
-            justifyContent: 'center',
-          }}
-        >
-          <Plus size={18} />
-          Add session
-        </button>
+        {/* Add session button — edit mode only */}
+        {editMode && (
+          <button
+            onClick={() => setAddSessionSheet(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginTop: '16px',
+              background: 'var(--surface-1)',
+              border: '1px dashed var(--border)',
+              borderRadius: '16px',
+              padding: '14px',
+              cursor: 'pointer',
+              color: 'var(--blue)',
+              fontSize: '15px',
+              fontWeight: 500,
+              width: '100%',
+              justifyContent: 'center',
+            }}
+          >
+            <Plus size={18} />
+            Add session
+          </button>
+        )}
 
         {!programme && (
           <div style={{ textAlign: 'center', marginTop: '40px' }}>

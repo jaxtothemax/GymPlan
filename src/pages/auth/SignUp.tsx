@@ -24,7 +24,7 @@ const inputStyle = (hasError: boolean): CSSProperties => ({
   border: `1px solid ${hasError ? 'var(--red)' : 'var(--border)'}`,
   background: 'var(--surface-1)',
   color: 'var(--text-1)',
-  fontSize: '15px',
+  fontSize: '16px',
 })
 
 export default function SignUp() {
@@ -167,7 +167,7 @@ export default function SignUp() {
               borderRadius: '12px',
               background: 'var(--blue)',
               color: '#fff',
-              fontSize: '15px',
+              fontSize: '16px',
               fontWeight: 600,
               border: 'none',
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
