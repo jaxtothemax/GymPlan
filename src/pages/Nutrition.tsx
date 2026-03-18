@@ -317,6 +317,7 @@ export default function Nutrition() {
   const queryClient = useQueryClient()
   const [expandedMeals, setExpandedMeals] = useState<Set<number>>(new Set([0]))
   const [dietOpen, setDietOpen] = useState(false)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
   const [editingWeight, setEditingWeight] = useState(false)
   const [weightInput, setWeightInput] = useState('')
 
@@ -798,43 +799,6 @@ export default function Nutrition() {
           })}
         </div>
 
-        {/* ── Protein sources (filtered) ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <p className="body-strong" style={{ color: 'var(--text-1)' }}>Protein sources</p>
-          {activeDiets.size > 0 && (
-            <span className="caption" style={{ color: 'var(--text-3)' }}>
-              {filteredSources.length} of {PROTEIN_SOURCES.length} shown
-            </span>
-          )}
-        </div>
-        <div style={{
-          background: 'var(--surface-1)',
-          borderRadius: '14px',
-          border: '1px solid var(--border)',
-          overflow: 'hidden',
-          marginBottom: '20px',
-        }}>
-          {filteredSources.map((source, i) => (
-            <div
-              key={source.name}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '11px 14px',
-                borderBottom: i < filteredSources.length - 1 ? '1px solid var(--border)' : 'none',
-              }}
-            >
-              <p className="body" style={{ color: 'var(--text-1)', flex: 1 }}>{source.name}</p>
-              <span style={{ fontSize: '13px', color: 'var(--blue)', fontWeight: 600 }}>{source.protein}g</span>
-            </div>
-          ))}
-          {filteredSources.length === 0 && (
-            <p className="caption" style={{ color: 'var(--text-3)', padding: '16px 14px', textAlign: 'center' }}>
-              No sources match your restrictions
-            </p>
-          )}
-        </div>
-
         {/* ── Hydration ── */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -875,7 +839,6 @@ export default function Nutrition() {
                       justifyContent: 'center',
                       cursor: hydrationComplete ? 'default' : 'pointer',
                       transition: 'all 200ms ease',
-                      transform: 'scale(1)',
                     }}
                   >
                     <Droplet
@@ -892,6 +855,65 @@ export default function Nutrition() {
             <p className="caption" style={{ color: 'var(--text-3)', textAlign: 'center', marginTop: '14px' }}>
               {glassesConsumed} of {dailyGlasses} glasses · {glassesConsumed * 250}ml
             </p>
+          </div>
+        </div>
+
+        {/* ── Protein sources (collapsible) ── */}
+        <div style={{
+          background: 'var(--surface-1)',
+          borderRadius: '14px',
+          border: '1px solid var(--border)',
+          overflow: 'hidden',
+          marginBottom: '20px',
+        }}>
+          <button
+            onClick={() => setSourcesOpen(o => !o)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '14px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              gap: '10px',
+            }}
+          >
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p className="body-strong" style={{ color: 'var(--text-1)' }}>Protein sources</p>
+              {activeDiets.size > 0 && (
+                <p className="caption" style={{ color: 'var(--text-3)', marginTop: '2px' }}>
+                  {filteredSources.length} of {PROTEIN_SOURCES.length} shown
+                </p>
+              )}
+            </div>
+            <div style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+              {sourcesOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </div>
+          </button>
+
+          <div className="accordion-body" style={{ maxHeight: sourcesOpen ? '800px' : '0' }}>
+            <div style={{ borderTop: '1px solid var(--border)' }}>
+              {filteredSources.map((source, i) => (
+                <div
+                  key={source.name}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '11px 14px',
+                    borderBottom: i < filteredSources.length - 1 ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  <p className="body" style={{ color: 'var(--text-1)', flex: 1 }}>{source.name}</p>
+                  <span style={{ fontSize: '13px', color: 'var(--blue)', fontWeight: 600 }}>{source.protein}g</span>
+                </div>
+              ))}
+              {filteredSources.length === 0 && (
+                <p className="caption" style={{ color: 'var(--text-3)', padding: '16px 14px', textAlign: 'center' }}>
+                  No sources match your restrictions
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
