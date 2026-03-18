@@ -138,7 +138,6 @@ export default function Progress() {
     ? `${(totalVolume / 1000).toFixed(1)}t`
     : `${totalVolume.toFixed(0)}kg`
 
-  const now = new Date()
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   const thisWeekCount = loggedSessions.filter(s => new Date(s.logged_date + 'T12:00:00') >= weekAgo).length
 
