@@ -2,13 +2,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Dot,
+  LineChart, Line,
+  BarChart, Bar, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, Dot,
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -135,6 +131,54 @@ export default function Progress() {
     }))
   })()
 
+  // ---- General dashboard (no exercise selected) ----
+  const totalSessions = loggedSessions.length
+  const totalVolume = loggedSets.reduce((sum, s) => sum + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+  const volumeLabel = totalVolume >= 1000
+    ? `${(totalVolume / 1000).toFixed(1)}t`
+    : `${totalVolume.toFixed(0)}kg`
+
+  const now = new Date()
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const thisWeekCount = loggedSessions.filter(s => new Date(s.logged_date + 'T12:00:00') >= weekAgo).length
+
+  const weeklyActivity = (() => {
+    const weeks: { label: string; sessions: number; volume: number }[] = []
+    for (let i = 5; i >= 0; i--) {
+      const end = new Date(now)
+      end.setDate(now.getDate() - i * 7)
+      const start = new Date(end)
+      start.setDate(end.getDate() - 6)
+      const wkSessions = loggedSessions.filter(s => {
+        const d = new Date(s.logged_date + 'T12:00:00')
+        return d >= start && d <= end
+      })
+      const vol = wkSessions.reduce((sum, ls) =>
+        sum + loggedSets.filter(s => s.logged_session_id === ls.id)
+          .reduce((v, s) => v + (s.reps ?? 0) * (s.weight_kg ?? 0), 0), 0)
+      weeks.push({
+        label: i === 0 ? 'Now' : start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        sessions: wkSessions.length,
+        volume: Math.round(vol),
+      })
+    }
+    return weeks
+  })()
+
+  const recentSessions = [...loggedSessions].slice(0, 5)
+
+  const topLifts = exercises
+    .map(exercise => {
+      const sets = loggedSets.filter(s => s.exercise_id === exercise.id)
+      if (!sets.length) return null
+      const best = sets.reduce<LoggedSet | null>((b, s) =>
+        !b || (s.weight_kg ?? 0) > (b.weight_kg ?? 0) ? s : b, null)
+      return best ? { name: exercise.name, weight: best.weight_kg ?? 0, reps: best.reps ?? 0 } : null
+    })
+    .filter((p): p is { name: string; weight: number; reps: number } => p !== null && p.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 6)
+
   // ---- Personal records ----
   const allSetsForExercise = loggedSets.filter(s => s.exercise_id === selectedExerciseId)
   const heaviestSet = allSetsForExercise.reduce<LoggedSet | null>((best, s) => {
@@ -181,38 +225,42 @@ export default function Progress() {
           </select>
         </div>
 
-        {/* Time range */}
-        <div style={{
-          display: 'flex',
-          background: 'var(--surface-1)',
-          borderRadius: '10px',
-          padding: '3px',
-          gap: '3px',
-          marginBottom: '16px',
-          border: '1px solid var(--border)',
-        }}>
-          {(['30d', '90d', 'all'] as TimeRange[]).map(r => (
-            <button
-              key={r}
-              onClick={() => setTimeRange(r)}
-              style={{
-                flex: 1,
-                padding: '7px',
-                borderRadius: '8px',
-                border: 'none',
-                background: timeRange === r ? 'var(--blue)' : 'transparent',
-                color: timeRange === r ? '#fff' : 'var(--text-2)',
-                fontSize: '13px',
-                fontWeight: timeRange === r ? 600 : 400,
-                cursor: 'pointer',
-              }}
-            >
-              {r === 'all' ? 'All time' : r}
-            </button>
-          ))}
-        </div>
+        {/* Chart + per-exercise detail */}
+        {selectedExerciseId && (
+          <>
+          {/* Time range */}
+          <div style={{
+            display: 'flex',
+            background: 'var(--surface-1)',
+            borderRadius: '10px',
+            padding: '3px',
+            gap: '3px',
+            marginBottom: '16px',
+            border: '1px solid var(--border)',
+          }}>
+            {(['30d', '90d', 'all'] as TimeRange[]).map(r => (
+              <button
+                key={r}
+                onClick={() => setTimeRange(r)}
+                style={{
+                  flex: 1,
+                  padding: '7px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: timeRange === r ? 'var(--blue)' : 'transparent',
+                  color: timeRange === r ? '#fff' : 'var(--text-2)',
+                  fontSize: '13px',
+                  fontWeight: timeRange === r ? 600 : 400,
+                  cursor: 'pointer',
+                }}
+              >
+                {r === 'all' ? 'All time' : r}
+              </button>
+            ))}
+          </div>
+          </>
+        )}
 
-        {/* Chart */}
         {selectedExerciseId && (
           <>
             <div style={{
@@ -365,11 +413,107 @@ export default function Progress() {
           </>
         )}
 
+        {/* ── General dashboard (no exercise selected) ── */}
         {!selectedExerciseId && (
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <p className="body" style={{ color: 'var(--text-2)' }}>
-              Select an exercise to view your progress.
-            </p>
+          <div>
+            {/* Stat chips */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ background: 'var(--blue-dim)', borderRadius: '14px', padding: '14px', border: '1px solid var(--border)' }}>
+                <p className="label" style={{ color: 'var(--blue)', marginBottom: '6px' }}>Workouts</p>
+                <p className="title" style={{ color: 'var(--blue)' }}>{totalSessions}</p>
+                <p style={{ fontSize: '11px', color: 'var(--blue)', opacity: 0.7, marginTop: '2px' }}>total</p>
+              </div>
+              <div style={{ background: 'var(--green-dim)', borderRadius: '14px', padding: '14px', border: '1px solid var(--border)' }}>
+                <p className="label" style={{ color: 'var(--green)', marginBottom: '6px' }}>Volume</p>
+                <p className="title" style={{ color: 'var(--green)' }}>{volumeLabel}</p>
+                <p style={{ fontSize: '11px', color: 'var(--green)', opacity: 0.7, marginTop: '2px' }}>lifted</p>
+              </div>
+              <div style={{ background: 'var(--amber-dim)', borderRadius: '14px', padding: '14px', border: '1px solid var(--border)' }}>
+                <p className="label" style={{ color: 'var(--amber)', marginBottom: '6px' }}>This week</p>
+                <p className="title" style={{ color: 'var(--amber)' }}>{thisWeekCount}</p>
+                <p style={{ fontSize: '11px', color: 'var(--amber)', opacity: 0.7, marginTop: '2px' }}>sessions</p>
+              </div>
+            </div>
+
+            {/* Weekly activity chart */}
+            {weeklyActivity.some(w => w.sessions > 0) && (
+              <div style={{ background: 'var(--surface-1)', borderRadius: '16px', border: '1px solid var(--border)', padding: '16px', marginBottom: '20px' }}>
+                <p className="caption" style={{ color: 'var(--text-2)', marginBottom: '14px' }}>Weekly sessions — last 6 weeks</p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <BarChart data={weeklyActivity} margin={{ top: 4, right: 4, bottom: 0, left: -28 }} barSize={22}>
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '13px', color: 'var(--text-1)' }}
+                      formatter={(value: number, name: string) => [value, name === 'sessions' ? 'Sessions' : 'Volume']}
+                      cursor={{ fill: 'var(--surface-2)' }}
+                    />
+                    <Bar dataKey="sessions" radius={[6, 6, 0, 0]}>
+                      {weeklyActivity.map((entry, i) => (
+                        <Cell key={i} fill={i === weeklyActivity.length - 1 ? 'var(--blue)' : 'var(--surface-3)'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Recent sessions */}
+            {recentSessions.length > 0 && (
+              <>
+                <p className="body-strong" style={{ color: 'var(--text-1)', marginBottom: '10px' }}>Recent sessions</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
+                  {recentSessions.map(session => {
+                    const sets = loggedSets.filter(s => s.logged_session_id === session.id)
+                    const vol = sets.reduce((sum, s) => sum + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+                    return (
+                      <button
+                        key={session.id}
+                        onClick={() => navigate(`/progress/session/${session.id}`)}
+                        style={{ width: '100%', background: 'var(--surface-1)', borderRadius: '12px', border: '1px solid var(--border)', padding: '12px 14px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="body-strong" style={{ color: 'var(--text-1)' }}>{session.session_name}</p>
+                          <p className="caption" style={{ color: 'var(--text-2)', marginTop: '2px' }}>{formatDate(session.logged_date)}</p>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <p style={{ fontSize: '13px', color: 'var(--blue)', fontWeight: 600 }}>
+                            {vol >= 1000 ? `${(vol / 1000).toFixed(1)}t` : `${vol.toFixed(0)}kg`}
+                          </p>
+                          <p className="caption" style={{ color: 'var(--text-3)', marginTop: '1px' }}>{sets.length} sets</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Top lifts */}
+            {topLifts.length > 0 && (
+              <>
+                <p className="body-strong" style={{ color: 'var(--text-1)', marginBottom: '10px' }}>Top lifts</p>
+                <div style={{ background: 'var(--surface-1)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden', marginBottom: '16px' }}>
+                  {topLifts.map((lift, i) => (
+                    <div key={lift.name} style={{ display: 'flex', alignItems: 'center', padding: '11px 14px', borderBottom: i < topLifts.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-3)', width: '20px', flexShrink: 0 }}>{i + 1}</span>
+                      <p className="body" style={{ color: 'var(--text-1)', flex: 1, minWidth: 0 }}>{lift.name}</p>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <span style={{ fontSize: '13px', color: 'var(--blue)', fontWeight: 600 }}>{lift.weight}kg</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-3)', marginLeft: '6px' }}>{lift.reps} reps</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {totalSessions === 0 && (
+              <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                <p className="body" style={{ color: 'var(--text-2)' }}>No sessions logged yet.</p>
+                <p className="caption" style={{ color: 'var(--text-3)', marginTop: '4px' }}>Log your first workout to see your stats here.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
