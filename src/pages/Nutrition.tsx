@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronUp, Pencil, Check } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Check, Droplet } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -387,6 +388,54 @@ export default function Nutrition() {
 
   const bodyWeight = profile?.body_weight_kg ?? 80
   const proteinTarget = Math.round(bodyWeight * 2)
+
+  // ── Hydration ──────────────────────────────────────────────────────────────
+  const today = new Date().toISOString().split('T')[0]
+  const HYDRATION_KEY = 'gymplan_hydration'
+  // 250ml per glass, ~33ml/kg/day formula, min 8 glasses
+  const dailyGlasses = Math.max(8, Math.round(bodyWeight * 0.033 / 0.25))
+
+  const [glassesConsumed, setGlassesConsumed] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(HYDRATION_KEY)
+      if (!raw) return 0
+      const { date, count } = JSON.parse(raw)
+      return date === today ? (count as number) : 0
+    } catch { return 0 }
+  })
+
+  const confettiFiredRef = useRef(false)
+
+  // Reset if date changed
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HYDRATION_KEY)
+      if (raw) {
+        const { date } = JSON.parse(raw)
+        if (date !== today) {
+          setGlassesConsumed(0)
+          localStorage.removeItem(HYDRATION_KEY)
+          confettiFiredRef.current = false
+        }
+      }
+    } catch {}
+  }, [today])
+
+  const hydrationComplete = glassesConsumed >= dailyGlasses
+
+  function tapGlass(idx: number) {
+    if (hydrationComplete) return
+    // Tap filled → unfill from here; tap empty → fill up to here
+    const newCount = idx < glassesConsumed ? idx : idx + 1
+    setGlassesConsumed(newCount)
+    localStorage.setItem(HYDRATION_KEY, JSON.stringify({ date: today, count: newCount }))
+    if (newCount >= dailyGlasses && !confettiFiredRef.current) {
+      confettiFiredRef.current = true
+      setTimeout(() => {
+        confetti({ particleCount: 160, spread: 90, origin: { y: 0.65 }, colors: ['#60a5fa', '#3b82f6', '#93c5fd', '#bfdbfe', '#ffffff'] })
+      }, 50)
+    }
+  }
 
   // Resolve all meals against active diets
   const resolvedMeals = MEAL_DATA.map(meal => {
@@ -784,6 +833,66 @@ export default function Nutrition() {
               No sources match your restrictions
             </p>
           )}
+        </div>
+
+        {/* ── Hydration ── */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <p className="body-strong" style={{ color: 'var(--text-1)' }}>Hydration</p>
+            <p className="caption" style={{ color: hydrationComplete ? 'var(--blue)' : 'var(--text-2)' }}>
+              {(glassesConsumed * 0.25).toFixed(2).replace(/\.?0+$/, '')}L&nbsp;/&nbsp;{(dailyGlasses * 0.25).toFixed(2).replace(/\.?0+$/, '')}L
+            </p>
+          </div>
+
+          <div style={{
+            background: 'var(--surface-1)',
+            borderRadius: '14px',
+            border: `1px solid ${hydrationComplete ? 'var(--blue)' : 'var(--border)'}`,
+            padding: '16px',
+            transition: 'border-color 300ms ease',
+          }}>
+            {hydrationComplete && (
+              <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--blue)', fontWeight: 600, marginBottom: '14px' }}>
+                🎉 Daily goal reached!
+              </p>
+            )}
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+              {Array.from({ length: dailyGlasses }, (_, i) => {
+                const filled = i < glassesConsumed
+                return (
+                  <button
+                    key={i}
+                    onClick={() => tapGlass(i)}
+                    style={{
+                      width: '52px',
+                      height: '52px',
+                      borderRadius: '12px',
+                      border: `1.5px solid ${filled ? 'var(--blue)' : 'var(--border)'}`,
+                      background: filled ? 'var(--blue-dim)' : 'var(--surface-2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: hydrationComplete ? 'default' : 'pointer',
+                      transition: 'all 200ms ease',
+                      transform: 'scale(1)',
+                    }}
+                  >
+                    <Droplet
+                      size={22}
+                      fill={filled ? 'var(--blue)' : 'none'}
+                      color={filled ? 'var(--blue)' : 'var(--text-3)'}
+                      style={{ transition: 'all 200ms ease' }}
+                    />
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="caption" style={{ color: 'var(--text-3)', textAlign: 'center', marginTop: '14px' }}>
+              {glassesConsumed} of {dailyGlasses} glasses · {glassesConsumed * 250}ml
+            </p>
+          </div>
         </div>
 
         {/* Notes */}
