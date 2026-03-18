@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider, useToast } from './contexts/ToastContext'
@@ -66,9 +66,11 @@ function AppLayout({ children }: { children: ReactNode }) {
 
 function SeedRunner() {
   const { user } = useAuth()
+  const seeded = useRef(false)
 
   useEffect(() => {
-    if (user) {
+    if (user && !seeded.current) {
+      seeded.current = true
       seedDefaultData(user.id).catch(console.error)
     }
   }, [user])
